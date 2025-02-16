@@ -1,15 +1,30 @@
 import 'dart:io';
+import 'package:args/args.dart';
 
 void main(List<String> arguments) {
-  if (arguments.isEmpty) {
-    print('Usage: dart run <command>');
+  final parser = ArgParser()
+    ..addOption(
+      'branch',
+      abbr: 'b',
+      defaultsTo: 'origin/main',
+      help: 'Specify the branch to use for git diff',
+    );
+
+  final argResults = parser.parse(arguments);
+  final branch = argResults['branch'] as String;
+  final command = argResults.rest.isNotEmpty ? argResults.rest.first : null;
+
+  if (command == null) {
+    print('Usage: dart-diff <command> [-b <branch>]');
     print('Available commands: format, analyze, test');
     exit(1);
   }
 
   if (!isFlutterProjectRoot()) {
     print(
-        'Error: No pubspec.yaml file found.\nThis command should be run from the root of your Flutter project.');
+      'Error: No pubspec.yaml file found. '
+      'This command should be run from the root of your Flutter project.',
+    );
     exit(1);
   }
 
@@ -20,10 +35,9 @@ void main(List<String> arguments) {
   print('Current directory: $basePath');
   print('Repository root: $repoRoot');
   print('Relative base path: $relativeBasePath');
+  print('Using branch: $branch');
 
-  final command = arguments.first;
-
-  final modifiedFiles = getModifiedFiles()
+  final modifiedFiles = getModifiedFiles(branch)
       .where(
         (file) => file.endsWith('.dart') && file.startsWith(relativeBasePath),
       )
@@ -36,8 +50,8 @@ void main(List<String> arguments) {
 
   print('Modified Dart files:\n${modifiedFiles.join('\n')}');
 
-  final List<String> files = [];
-  final Set<String> testFiles = {};
+  final files = <String>[];
+  final testFiles = <String>{};
 
   for (final file in modifiedFiles) {
     final relativePath = file.replaceFirst('$relativeBasePath/', '');
@@ -81,7 +95,9 @@ void main(List<String> arguments) {
 }
 
 String runCommand(List<String> command, {bool output = true}) {
-  print('Running: ${command.join(' ')}');
+  if (output) {
+    print('Running: ${command.join(' ')}');
+  }
   final result = Process.runSync(command.first, command.sublist(1));
   if (result.exitCode != 0) {
     print('Error running ${command.sublist(0, 1).join(' ')} ${result.stderr}');
@@ -106,7 +122,7 @@ String getGitRepoRoot() {
   return result.stdout.trim();
 }
 
-List<String> getModifiedFiles() {
+List<String> getModifiedFiles(String branch) {
   if (!_isGitInstalled()) {
     print('Error: Git is not installed or not found in PATH.');
     exit(1);
@@ -116,7 +132,7 @@ List<String> getModifiedFiles() {
     exit(1);
   }
   final result = runCommand(
-    ['git', 'diff', '--name-only', 'origin/main...HEAD'],
+    ['git', 'diff', '--name-only', '$branch...HEAD'],
     output: false,
   );
   return result.split('\n').map((e) => e.trim()).toList();
@@ -129,18 +145,6 @@ String calculateTestFile(String filePath) {
         .replaceAll('.dart', '_test.dart');
   }
   return filePath.replaceAll('.dart', '_test.dart');
-}
-
-List<String> getTestFiles(List<String> files) {
-  return files
-      .map((file) {
-        if (file.contains('test/')) return file;
-        return file
-            .replaceFirst('lib/', 'test/')
-            .replaceAll('.dart', '_test.dart');
-      })
-      .where((file) => File(file).existsSync())
-      .toList();
 }
 
 bool _isGitInstalled() {
