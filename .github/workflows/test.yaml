@@ -1,0 +1,53 @@
+name: test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+jobs:
+  lint_shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+      - name: Run shellcheck
+        uses: ludeeus/action-shellcheck@master
+
+  test_action:
+    runs-on: ubuntu-latest
+    env:
+      APP_DIR: ./example
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.19.6
+          channel: stable
+          cache: true
+
+      - name: Set up dart-diff
+        run: dart pub global activate --source path .
+
+      - name: Dart Format
+        run: dart_diff format
+        working-directory: ${{ env.APP_DIR }}
+
+      - name: Dart Analyze
+        run: dart_diff analyze
+        working-directory: ${{ env.APP_DIR }}
+
+      - name: Run Flutter test
+        run: dart_diff test -f
+        working-directory: ${{ env.APP_DIR }}
