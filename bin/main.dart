@@ -3,10 +3,12 @@ import 'package:args/args.dart';
 
 void main(List<String> arguments) {
   final parser = ArgParser()
-    ..addOption('branch',
-        abbr: 'b',
-        defaultsTo: 'origin/main',
-        help: 'Specify the branch to use for git diff')
+    ..addOption(
+      'branch',
+      abbr: 'b',
+      defaultsTo: 'origin/main',
+      help: 'Specify the branch to use for git diff',
+    )
     ..addFlag(
       'flutter',
       abbr: 'f',
@@ -73,7 +75,9 @@ void main(List<String> arguments) {
       }
     } else {
       print(
-          'File $relativePath does not exist in the current directory. Skipping...');
+        'File $relativePath does not exist in the current directory. '
+        'Skipping...',
+      );
     }
   }
 
@@ -127,7 +131,7 @@ String getGitRepoRoot() {
   return result.stdout.trim();
 }
 
-List<String> getModifiedFiles(String branch) {
+List<String> getModifiedFiles(String baseBranch) {
   if (!_isGitInstalled()) {
     print('Error: Git is not installed or not found in PATH.');
     exit(1);
@@ -137,7 +141,13 @@ List<String> getModifiedFiles(String branch) {
     exit(1);
   }
   final result = runCommand(
-    ['git', 'diff', '--name-only', '$branch...HEAD'],
+    [
+      'git',
+      'diff',
+      '--name-only',
+      '--diff-filter=A',
+      baseBranch,
+    ],
     output: false,
   );
   return result.split('\n').map((e) => e.trim()).toList();
