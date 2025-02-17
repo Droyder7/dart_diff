@@ -6,8 +6,14 @@ void main(List<String> arguments) {
     ..addOption(
       'branch',
       abbr: 'b',
-      defaultsTo: 'origin/main',
-      help: 'Specify the branch to use for git diff',
+      defaultsTo: 'main',
+      help: 'Specify the base branch to use for git diff',
+    )
+    ..addOption(
+      'remote',
+      abbr: 'r',
+      defaultsTo: 'origin',
+      help: 'Specify the remote repository to use for git diff',
     )
     ..addFlag(
       'flutter',
@@ -17,12 +23,14 @@ void main(List<String> arguments) {
 
   final argResults = parser.parse(arguments);
   final branch = argResults['branch'] as String;
-  final useFlutterTest = argResults['flutter'] as bool;
-  final command = argResults.rest.isNotEmpty ? argResults.rest.first : null;
+  final remote = argResults['remote'] as String;
+  final useFlutter = argResults['flutter'] as bool;
+  final command = argResults.rest.firstOrNull;
+  final extraArgs = argResults.rest.skip(1).toList();
 
   if (command == null) {
     print('Usage: dart-diff <command> [-b <branch>]');
-    print('Available commands: format, analyze, test');
+    print('Available commands: format, analyze, test, exec');
     exit(1);
   }
 
@@ -41,9 +49,9 @@ void main(List<String> arguments) {
   print('Current directory: $basePath');
   print('Repository root: $repoRoot');
   print('Relative base path: $relativeBasePath');
-  print('Using branch: $branch');
+  print('Using branch: $remote/$branch');
 
-  final modifiedFiles = getModifiedFiles(branch)
+  final modifiedFiles = getModifiedFiles(remote, branch)
       .where(
         (file) => file.endsWith('.dart') && file.startsWith(relativeBasePath),
       )
@@ -81,24 +89,34 @@ void main(List<String> arguments) {
     }
   }
 
+  final commandRunner = useFlutter ? 'flutter' : 'dart';
+
   switch (command) {
+    case 'exec':
+      if (extraArgs.isEmpty) {
+        print('Usage: dart-diff exec -- <command> <args>');
+        exit(1);
+      }
+      final isTest = extraArgs.any((e) => e.contains('test'));
+      final filenames = isTest ? testFiles : files;
+      runCommand([...extraArgs, ...filenames]);
+      break;
     case 'format':
       runCommand(['dart', 'format', ...files]);
       break;
     case 'analyze':
-      runCommand(['dart', 'analyze', ...files]);
+      runCommand([commandRunner, 'analyze', ...files, ...extraArgs]);
       break;
     case 'test':
       if (testFiles.isNotEmpty) {
-        final testCommand = useFlutterTest ? 'flutter' : 'dart';
-        runCommand([testCommand, 'test', ...testFiles]);
+        runCommand([commandRunner, 'test', ...testFiles, ...extraArgs]);
       } else {
         print('No relevant test files found.');
       }
       break;
     default:
       print('Unknown command: $command');
-      print('Available commands: format, analyze, test');
+      print('Available commands: format, analyze, test, exec');
       exit(1);
   }
 }
@@ -109,7 +127,7 @@ String runCommand(List<String> command, {bool output = true}) {
   }
   final result = Process.runSync(command.first, command.sublist(1));
   if (result.exitCode != 0) {
-    print('Error running ${command.sublist(0, 1).join(' ')} ${result.stderr}');
+    print('Error running ${command.sublist(0, 2).join(' ')} ${result.stderr}');
     exit(1);
   }
   if (output) {
@@ -131,7 +149,7 @@ String getGitRepoRoot() {
   return result.stdout.trim();
 }
 
-List<String> getModifiedFiles(String baseBranch) {
+List<String> getModifiedFiles(String remote, String branch) {
   if (!_isGitInstalled()) {
     print('Error: Git is not installed or not found in PATH.');
     exit(1);
@@ -140,13 +158,14 @@ List<String> getModifiedFiles(String baseBranch) {
     print('Error: Not a git repository.');
     exit(1);
   }
+  runCommand(['git', 'fetch', remote, branch], output: false);
   final result = runCommand(
     [
       'git',
       'diff',
       '--name-only',
       '--diff-filter=A',
-      baseBranch,
+      '$remote/$branch',
     ],
     output: false,
   );
