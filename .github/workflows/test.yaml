@@ -45,7 +45,7 @@ jobs:
         working-directory: ${{ env.APP_DIR }}
 
       - name: Dart Analyze
-        run: dart_diff analyze
+        run: dart_diff analyze -f
         working-directory: ${{ env.APP_DIR }}
 
       - name: Run Flutter test

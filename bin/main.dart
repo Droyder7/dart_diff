@@ -24,7 +24,7 @@ void main(List<String> arguments) {
   final argResults = parser.parse(arguments);
   final branch = argResults['branch'] as String;
   final remote = argResults['remote'] as String;
-  final useFlutterTest = argResults['flutter'] as bool;
+  final useFlutter = argResults['flutter'] as bool;
   final command = argResults.rest.isNotEmpty ? argResults.rest.first : null;
 
   if (command == null) {
@@ -48,7 +48,7 @@ void main(List<String> arguments) {
   print('Current directory: $basePath');
   print('Repository root: $repoRoot');
   print('Relative base path: $relativeBasePath');
-  print('Using branch: $branch');
+  print('Using branch: $remote/$branch');
 
   final modifiedFiles = getModifiedFiles(remote, branch)
       .where(
@@ -93,12 +93,11 @@ void main(List<String> arguments) {
       runCommand(['dart', 'format', ...files]);
       break;
     case 'analyze':
-      runCommand(['dart', 'analyze', ...files]);
+      runCommand([useFlutter ? 'flutter' : 'dart', 'analyze', ...files]);
       break;
     case 'test':
       if (testFiles.isNotEmpty) {
-        final testCommand = useFlutterTest ? 'flutter' : 'dart';
-        runCommand([testCommand, 'test', ...testFiles]);
+        runCommand([useFlutter ? 'flutter' : 'dart', 'test', ...testFiles]);
       } else {
         print('No relevant test files found.');
       }
