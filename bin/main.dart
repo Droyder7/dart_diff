@@ -3,15 +3,19 @@ import 'package:args/args.dart';
 
 void main(List<String> arguments) {
   final parser = ArgParser()
-    ..addOption(
-      'branch',
-      abbr: 'b',
-      defaultsTo: 'origin/main',
-      help: 'Specify the branch to use for git diff',
+    ..addOption('branch',
+        abbr: 'b',
+        defaultsTo: 'origin/main',
+        help: 'Specify the branch to use for git diff')
+    ..addFlag(
+      'flutter',
+      abbr: 'f',
+      help: 'Run flutter test instead of dart test',
     );
 
   final argResults = parser.parse(arguments);
   final branch = argResults['branch'] as String;
+  final useFlutterTest = argResults['flutter'] as bool;
   final command = argResults.rest.isNotEmpty ? argResults.rest.first : null;
 
   if (command == null) {
@@ -82,7 +86,8 @@ void main(List<String> arguments) {
       break;
     case 'test':
       if (testFiles.isNotEmpty) {
-        runCommand(['flutter', 'test', ...testFiles]);
+        final testCommand = useFlutterTest ? 'flutter' : 'dart';
+        runCommand([testCommand, 'test', ...testFiles]);
       } else {
         print('No relevant test files found.');
       }
