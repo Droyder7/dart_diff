@@ -51,3 +51,7 @@ jobs:
       - name: Run Flutter test
         run: dart_diff test -f
         working-directory: ${{ env.APP_DIR }}
+
+      - name: Run exec command
+        run: dart_diff exec -- flutter test --no-pub --test-randomize-ordering-seed=random
+        working-directory: ${{ env.APP_DIR }}

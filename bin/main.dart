@@ -25,11 +25,12 @@ void main(List<String> arguments) {
   final branch = argResults['branch'] as String;
   final remote = argResults['remote'] as String;
   final useFlutter = argResults['flutter'] as bool;
-  final command = argResults.rest.isNotEmpty ? argResults.rest.first : null;
+  final command = argResults.rest.firstOrNull;
+  final extraArgs = argResults.rest.skip(1).toList();
 
   if (command == null) {
     print('Usage: dart-diff <command> [-b <branch>]');
-    print('Available commands: format, analyze, test');
+    print('Available commands: format, analyze, test, exec');
     exit(1);
   }
 
@@ -88,23 +89,34 @@ void main(List<String> arguments) {
     }
   }
 
+  final commandRunner = useFlutter ? 'flutter' : 'dart';
+
   switch (command) {
+    case 'exec':
+      if (extraArgs.isEmpty) {
+        print('Usage: dart-diff exec -- <command> <args>');
+        exit(1);
+      }
+      final isTest = extraArgs.any((e) => e.contains('test'));
+      final filenames = isTest ? testFiles : files;
+      runCommand([...extraArgs, ...filenames]);
+      break;
     case 'format':
       runCommand(['dart', 'format', ...files]);
       break;
     case 'analyze':
-      runCommand([useFlutter ? 'flutter' : 'dart', 'analyze', ...files]);
+      runCommand([commandRunner, 'analyze', ...files, ...extraArgs]);
       break;
     case 'test':
       if (testFiles.isNotEmpty) {
-        runCommand([useFlutter ? 'flutter' : 'dart', 'test', ...testFiles]);
+        runCommand([commandRunner, 'test', ...testFiles, ...extraArgs]);
       } else {
         print('No relevant test files found.');
       }
       break;
     default:
       print('Unknown command: $command');
-      print('Available commands: format, analyze, test');
+      print('Available commands: format, analyze, test, exec');
       exit(1);
   }
 }
