@@ -122,22 +122,35 @@ void main(List<String> arguments) {
 }
 
 String runCommand(List<String> command, {bool output = true}) {
-  if (output) {
-    print('Running: ${command.join(' ')}');
-  }
-  final result = Process.runSync(
-    command.first,
-    command.sublist(1),
-    workingDirectory: Directory.current.path,
-  );
-  if (result.exitCode != 0) {
-    print('Error running ${command.sublist(0, 2).join(' ')} ${result.stderr}');
+  try {
+    if (output) {
+      print('Running: ${command.join(' ')}');
+    }
+    // Logs the Working Directory
+    print('Working Directory: ${Directory.current.path}');
+    // run pwd command
+    final pwd = Process.runSync('pwd', []);
+
+    print('PWD: ${pwd.stdout}');
+
+    final result = Process.runSync(
+      command.first,
+      command.sublist(1),
+      workingDirectory: Directory.current.path,
+    );
+    if (result.exitCode != 0) {
+      print(
+          'Error running ${command.sublist(0, 2).join(' ')} ${result.stderr}');
+      exit(1);
+    }
+    if (output) {
+      stdout.write(result.stdout);
+    }
+    return result.stdout.toString();
+  } catch (e, s) {
+    print('Error running command: $command $e $s');
     exit(1);
   }
-  if (output) {
-    stdout.write(result.stdout);
-  }
-  return result.stdout.toString();
 }
 
 bool isFlutterProjectRoot() {
