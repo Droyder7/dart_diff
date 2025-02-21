@@ -125,7 +125,11 @@ String runCommand(List<String> command, {bool output = true}) {
   if (output) {
     print('Running: ${command.join(' ')}');
   }
-  final result = Process.runSync(command.first, command.sublist(1));
+  final result = Process.runSync(
+    command.first,
+    command.sublist(1),
+    workingDirectory: Directory.current.path,
+  );
   if (result.exitCode != 0) {
     print('Error running ${command.sublist(0, 2).join(' ')} ${result.stderr}');
     exit(1);
@@ -146,7 +150,11 @@ String getGitRepoRoot() {
     print('Error getting git repo root: ${result.stderr}');
     exit(1);
   }
-  return result.stdout.trim();
+  final path = result.stdout.toString().trim();
+  if (Platform.isWindows) {
+    return path.replaceAll('/', '\\');
+  }
+  return path;
 }
 
 List<String> getModifiedFiles(String remote, String branch) {
@@ -164,7 +172,7 @@ List<String> getModifiedFiles(String remote, String branch) {
       'git',
       'diff',
       '--name-only',
-      '--diff-filter=A',
+      '--diff-filter=ACMRT',
       '$remote/$branch',
     ],
     output: false,
