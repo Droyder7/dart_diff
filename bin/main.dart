@@ -53,7 +53,7 @@ void main(List<String> arguments) {
 
   final modifiedFiles = getModifiedFiles(remote, branch)
       .where(
-        (file) => file.endsWith('.dart') && file.startsWith(relativeBasePath),
+        (file) => file.endsWith('.dart'),
       )
       .toList();
 
@@ -105,11 +105,11 @@ void main(List<String> arguments) {
       runCommand(['dart', 'format', ...files]);
       break;
     case 'analyze':
-      runCommand([commandRunner, 'analyze', ...files, ...extraArgs]);
+      runCommand([commandRunner, 'analyze', ...files]);
       break;
     case 'test':
       if (testFiles.isNotEmpty) {
-        runCommand([commandRunner, 'test', ...testFiles, ...extraArgs]);
+        runCommand([commandRunner, 'test', ...testFiles]);
       } else {
         print('No relevant test files found.');
       }
